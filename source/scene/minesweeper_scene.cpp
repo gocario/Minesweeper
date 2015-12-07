@@ -34,7 +34,7 @@ void ms_init(u16 width, u16 height, u16 bombCount)
 
 	minesland.tile.type = TILE_EMPTY;
 	minesland.tile.state = TILE_UNKNOWN;
-	minesland.tile.checked = false;
+	minesland.tile.checked = true;
 
 	ms_populateTiles();
 }
@@ -56,19 +56,32 @@ void ms_fini()
 
 	minesland.tile.type = TILE_EMPTY;
 	minesland.tile.state = TILE_UNKNOWN;
-	minesland.tile.checked = false;
+	minesland.tile.checked = true;
 }
 
 
 void ms_win()
 {
-
+	printf("You won!\n");
 }
 
 
 void ms_boom()
 {
+	printf("You lose!\n");
 
+	for (u16 ii = 0; ii < minesland.size; ii++)
+	{
+		if (minesland.data[ii].type == TILE_MINE)
+		{
+			if (minesland.data[ii].state == TILE_UNKNOWN)
+				minesland.data[ii].type = TILE_MINE_BOOM;
+			// else if (minesland.data[ii].state == TILE_FLAGGED)
+			// 	minesland.data[ii].type = TILE_MINE;
+		
+			minesland.data[ii].state = TILE_DISCOVERED;
+		}
+	}
 }
 
 
@@ -230,24 +243,36 @@ bool ms_isDiscovered(s16 x, s16 y)
 	 | Controller |
 	\*------------*/
 
-void ms_clearCheckTiles()
+void ms_checkWin()
 {
-	for (u16 row = 0; row < minesland.height; row++)
+	if (minesland.tileLeft == 0)
 	{
-		for (u16 col = 0; col < minesland.width; col++)
-		{
-			ms_getTile(col, row)->checked = false;
-		}
+		ms_win();
 	}
 }
+
+
+void ms_clearCheckTiles()
+{
+	for (u16 ii = 0; ii < minesland.size; ii++)
+	{
+		minesland.data[ii].checked = false;
+	}
+}
+
 
 void ms_checkTile(s16 x, s16 y)
 {
 	tile_s* tile = ms_getTile(x, y);
 
-	if (!tile->checked)
+	if (!tile->checked && tile->state != TILE_DISCOVERED)
 	{
 		tile->checked = true;
+
+		if (tile->type != TILE_MINE)
+		{
+			ms_discover(tile);
+		}
 
 		if (tile->type == TILE_EMPTY)
 		{
@@ -259,8 +284,6 @@ void ms_checkTile(s16 x, s16 y)
 					else
 					{
 						ms_checkTile(x + col, y + row);
-
-						ms_getTile(x + col, y + row)->state = TILE_DISCOVERED;
 					}
 				}
 			}
@@ -268,21 +291,32 @@ void ms_checkTile(s16 x, s16 y)
 	}
 }
 
+
+void ms_discover(tile_s* tile)
+{
+	if (tile->state != TILE_DISCOVERED)
+	{
+		tile->state = TILE_DISCOVERED;
+		minesland.tileLeft--;
+
+		ms_checkWin();
+	}
+}
+
+
 void ms_discoverTile(u16 x, u16 y)
 {
 	tile_s* tile = ms_getTile(x, y);
-	if (tile->type == TILE_MINE)
+	if (tile->state == TILE_UNKNOWN)
 	{
-		ms_boom();
-	}
-	else
-	{
-		if (tile->state == TILE_FLAGGED || tile->state == TILE_HINTED);
+		if (tile->type == TILE_MINE)
+		{
+			ms_boom();
+		}
 		else
 		{
 			ms_clearCheckTiles();
 			ms_checkTile(x, y);
-			tile->state = TILE_DISCOVERED;
 		}
 	}
 }
@@ -290,17 +324,14 @@ void ms_discoverTile(u16 x, u16 y)
 
 void ms_discoverTiles()
 {
-	for (u16 row = 0; row < minesland.height; row++)
+	for (u16 ii = 0; ii < minesland.size; ii++)
 	{
-		for (u16 col = 0; col < minesland.width; col++)
-		{
-			// ms_discoverTile(col, row);
-			ms_getTile(col, row)->state = TILE_DISCOVERED;
-		}
+		ms_discover(&minesland.data[ii]);
 	}
 }
 
-void ms_stateUnknowTile(u16 x, u16 y)
+
+void ms_stateUnknownTile(u16 x, u16 y)
 {
 	ms_getTile(x, y)->state = TILE_UNKNOWN;
 }
@@ -310,8 +341,8 @@ void ms_stateFlagTile(u16 x, u16 y)
 {
 	tile_s* tile = ms_getTile(x, y);
 	if (tile->state == TILE_FLAGGED)
-		ms_stateUnknowTile(x, y);
-	else if (tile->state == TILE_UNKNOWN)
+		ms_stateUnknownTile(x, y);
+	else if (tile->state != TILE_DISCOVERED)
 		tile->state = TILE_FLAGGED;
 
 }
@@ -321,9 +352,33 @@ void ms_stateHintTile(u16 x, u16 y)
 {
 	tile_s* tile = ms_getTile(x, y);
 	if (tile->state == TILE_HINTED)
-		ms_stateUnknowTile(x, y);
-	else if (tile->state == TILE_UNKNOWN)
+		ms_stateUnknownTile(x, y);
+	else if (tile->state != TILE_DISCOVERED)
 		tile->state = TILE_HINTED;
+}
+
+
+void ms_stateHeldUp(u16 x, u16 y)
+{
+	tile_s* tile = ms_getTile(x, y);
+	if (tile->state == TILE_UNKNOWN_HELD)
+		tile->state = TILE_UNKNOWN;
+	else if (tile->state == TILE_FLAGGED_HELD)
+		tile->state = TILE_FLAGGED;
+	else if (tile->state == TILE_HINTED_HELD)
+		tile->state = TILE_HINTED;
+}
+
+
+void ms_stateHeldDown(u16 x, u16 y)
+{
+	tile_s* tile = ms_getTile(x, y);
+	if (tile->state == TILE_UNKNOWN)
+		tile->state = TILE_UNKNOWN_HELD;
+	else if (tile->state == TILE_FLAGGED)
+		tile->state = TILE_FLAGGED_HELD;
+	else if (tile->state == TILE_HINTED)
+		tile->state = TILE_HINTED_HELD;
 }
 
 
@@ -342,31 +397,35 @@ void ms_getTexTileType(tile_s* tile, int* tex_x, int* tex_y)
 			*tex_x = 3; *tex_y = 0;
 			break;
 		case TILE_1:
-			*tex_x = 0; *tex_y = 1;
-			break;
-		case TILE_2:
-			*tex_x = 1; *tex_y = 1;
-			break;
-		case TILE_3:
-			*tex_x = 2; *tex_y = 1;
-			break;
-		case TILE_4:
-			*tex_x = 3; *tex_y = 1;
-			break;
-		case TILE_5:
 			*tex_x = 0; *tex_y = 2;
 			break;
-		case TILE_6:
+		case TILE_2:
 			*tex_x = 1; *tex_y = 2;
 			break;
-		case TILE_7:
+		case TILE_3:
 			*tex_x = 2; *tex_y = 2;
 			break;
-		case TILE_8:
+		case TILE_4:
 			*tex_x = 3; *tex_y = 2;
 			break;
+		case TILE_5:
+			*tex_x = 0; *tex_y = 3;
+			break;
+		case TILE_6:
+			*tex_x = 1; *tex_y = 3;
+			break;
+		case TILE_7:
+			*tex_x = 2; *tex_y = 3;
+			break;
+		case TILE_8:
+			*tex_x = 3; *tex_y = 3;
+			break;
+		case TILE_MINE_BOOM:
+			*tex_x = 2; *tex_y = 1;
+			break;
+		case TILE_EMPTY_BOOM:
 		default:
-			*tex_x = 0; *tex_y = 0;
+			*tex_x = 3; *tex_y = 2;
 			break;
 	}
 }
@@ -382,8 +441,14 @@ void ms_getTexTileState(tile_s* tile, int* tex_x, int* tex_y)
 		case TILE_FLAGGED:
 			*tex_x = 1; *tex_y = 0;
 			break;
-		case TILE_HINTED:
-			*tex_x = 1; *tex_y = 0;
+		// case TILE_HINTED:
+		// 	*tex_x = 1; *tex_y = 0;
+		// 	break;
+		case TILE_UNKNOWN_HELD:
+			*tex_x = 0; *tex_y = 1;
+			break;
+		case TILE_FLAGGED_HELD:
+			*tex_x = 1; *tex_y = 1;
 			break;
 		case TILE_UNKNOWN:
 		default:
@@ -435,7 +500,7 @@ void MinesweeperScene::initialize()
 {
 	srand(osGetTime());
 
-	ms_init(20, 15, 50);
+	ms_init(20, 15, 10);
 
 	if (!mineTiles) mineTiles = sf2d_create_texture_mem_RGBA8(ImageManager::mineTiles_img.pixel_data, ImageManager::mineTiles_img.width, ImageManager::mineTiles_img.height, TEXFMT_RGBA8, SF2D_PLACE_RAM);
 }
@@ -451,7 +516,7 @@ void MinesweeperScene::destroy()
 
 void MinesweeperScene::drawTopScreen()
 {
-
+	printf("\x1B[10;1HTileleft: %3u\n", minesland.tileLeft);
 }
 
 
@@ -479,7 +544,7 @@ void MinesweeperScene::updateInput(const keystate_s& ks)
 
 		if (ks.down & KEY_X)
 		{
-			ms_init(20, 15, 50);
+			ms_init(20, 15, 10);
 			// ms_discoverTiles();
 		}
 	}
@@ -489,24 +554,69 @@ void MinesweeperScene::updateInput(const keystate_s& ks)
 		{
 			if (withinRectangle(ks.touch.px, ks.touch.py, 0, 0, 320, 240))
 			{
+				originalTouch = ks.touch;
+
 				u16 x = ks.touch.px / minesland.tileWidth;
 				u16 y = ks.touch.py /minesland.tileHeight;
 
-				printf("(%2u;%2u) touched\n", x, y);
+				ms_stateHeldDown(x, y);
 
-				if (ks.held & KEY_L)
-				{
-					ms_stateFlagTile(x, y);
-				}
-				else if (ks.held & KEY_R)
-				{
-					ms_stateHintTile(x, y);
-				}
-				else
-				{
-					ms_discoverTile(x, y);
-				}				
+				// printf("(%2u;%2u) down\n", x, y);
 			}
+		}
+
+		if (ks.held & KEY_TOUCH)
+		{
+			if (withinRectangle(ks.touch.px, ks.touch.py, 0, 0, 320, 240))
+			{
+				currentTouch = ks.touch;
+
+				u16 ox = originalTouch.px / minesland.tileWidth;
+				u16 oy = originalTouch.py /minesland.tileHeight;
+
+				u16 x = currentTouch.px / minesland.tileWidth;
+				u16 y = currentTouch.py /minesland.tileHeight;
+
+				if (ox == x && oy == y)
+					ms_stateHeldDown(ox, oy);
+				else
+					ms_stateHeldUp(ox, oy);
+			}
+		}
+
+		if (ks.up & KEY_TOUCH)
+		{
+			if (withinRectangle(currentTouch.px, currentTouch.py, 0, 0, 320, 240))
+			{
+				u16 ox = originalTouch.px / minesland.tileWidth;
+				u16 oy = originalTouch.py /minesland.tileHeight;
+
+				u16 x = currentTouch.px / minesland.tileWidth;
+				u16 y = currentTouch.py /minesland.tileHeight;
+
+				// printf("(%2u;%2u) up\n", x, y);
+
+				ms_stateHeldUp(x, y);
+
+				if (ox == x && oy == y)
+				{
+					if (ks.held & KEY_L)
+					{
+						ms_stateFlagTile(x, y);
+					}
+					else if (ks.held & KEY_R)
+					{
+						ms_stateHintTile(x, y);
+					}
+					else
+					{
+						ms_discoverTile(x, y);
+					}
+				}
+			}
+
+			originalTouch = ks.touch;
+			currentTouch = ks.touch;
 		}
 	}
 }

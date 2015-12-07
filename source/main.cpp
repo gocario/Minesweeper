@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 
 		// Draw the top screen
 		// sf2d_start_frame(GFX_TOP, GFX_LEFT);
-		// 	scene.drawTopScreen();
+			scene.drawTopScreen();
 		// sf2d_end_frame();
 		
 		// Draw the bottom screen

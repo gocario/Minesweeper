@@ -17,6 +17,9 @@ enum tileType_e
 	TILE_6,
 	TILE_7,
 	TILE_8,
+
+	TILE_MINE_BOOM,
+	TILE_EMPTY_BOOM,
 };
 
 enum tileState_e
@@ -24,7 +27,11 @@ enum tileState_e
 	TILE_UNKNOWN,
 	TILE_DISCOVERED,
 	TILE_FLAGGED,
-	TILE_HINTED,
+	TILE_HINTED = TILE_FLAGGED,
+
+	TILE_UNKNOWN_HELD,
+	TILE_FLAGGED_HELD,
+	TILE_HINTED_HELD,
 };
 
 struct tile_s
@@ -69,13 +76,17 @@ bool ms_isMine(s16 x, s16 y);
 bool ms_isDiscovered(s16 x, s16 y);
 
 /** Controller functions **/
+void ms_checkWin();
 void ms_clearCheckTiles();
 void ms_checkTile(s16 x, s16 y);
+void ms_discover(tile_s* tile);
 void ms_discoverTile(u16 x, u16 y);
 void ms_discoverTiles();
-void ms_stateUnknowTile(u16 x, u16 y);
+void ms_stateUnknownTile(u16 x, u16 y);
 void ms_stateFlagTile(u16 x, u16 y);
 void ms_stateHintTile(u16 x, u16 y);
+void ms_stateHeldUp(u16 x, u16 y);
+void ms_stateHeldDown(u16 x, u16 y);
 
 /** View functions **/
 void ms_getTexTileType(tile_s* tile, int* tex_x, int* tex_y);
