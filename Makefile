@@ -34,8 +34,8 @@ DATA		:=	data
 INCLUDES	:=	include include/data include/scene
 
 # NO_SMDH 		:= NO_SMDH
-APP_TITLE       := 3-Aldchemys
-APP_DESCRIPTION := A small kingdom of alchemy
+APP_TITLE       := Minesweeper
+APP_DESCRIPTION := MS Minesweeper port
 APP_AUTHOR      := Gocario
 
 #---------------------------------------------------------------------------------
@@ -145,8 +145,8 @@ run:
 
 #---------------------------------------------------------------------------------
 send: $(BUILD)
-	3dslink -a 10.3.19.58 $(TARGET).3dsx
-# 3dslink -a 192.168.0.19 $(TARGET).3dsx
+#	3dslink -a 10.3.19.58 $(TARGET).3dsx
+	3dslink -a 192.168.0.19 $(TARGET).3dsx
 	
 #---------------------------------------------------------------------------------
 else

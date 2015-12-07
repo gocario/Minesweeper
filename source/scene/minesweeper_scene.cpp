@@ -63,6 +63,14 @@ void ms_fini()
 void ms_win()
 {
 	printf("You won!\n");
+
+	for (u16 ii = 0; ii < minesland.size; ii++)
+	{
+		if (minesland.data[ii].type == TILE_MINE)
+		{
+			minesland.data[ii].state = TILE_DISCOVERED;
+		}
+	}
 }
 
 
@@ -76,8 +84,6 @@ void ms_boom()
 		{
 			if (minesland.data[ii].state == TILE_UNKNOWN)
 				minesland.data[ii].type = TILE_MINE_BOOM;
-			// else if (minesland.data[ii].state == TILE_FLAGGED)
-			// 	minesland.data[ii].type = TILE_MINE;
 		
 			minesland.data[ii].state = TILE_DISCOVERED;
 		}
@@ -91,15 +97,10 @@ void ms_boom()
 
 void ms_clearTiles()
 {
-	tile_s* tile;
-	for (u16 row = 0; row < minesland.height; row++)
+	for (u16 ii = 0; ii < minesland.size; ii++)
 	{
-		for (u16 col = 0; col < minesland.width; col++)
-		{
-			tile = ms_getTile(col, row);
-			tile->type = TILE_EMPTY;
-			tile->state = TILE_UNKNOWN;
-		}
+		minesland.data[ii].type = TILE_EMPTY;
+		minesland.data[ii].state = TILE_UNKNOWN;
 	}
 }
 
@@ -113,21 +114,11 @@ void ms_generateMines(s16 px, s16 py, u16 bombCount)
 		x = rand() % minesland.width;
 		y = rand() % minesland.height;
 
-		// printf("Mine {%2u,%2u} ?", x, y);
-
-		if (px == x && py == py)
-		{
-			// printf(" No\n");
-		}
+		if (px == x && py == y);
 		else if (!ms_isMine(x, y))
 		{
-			// printf(" Yes\n");
 			ms_getTile(x, y)->type = TILE_MINE;
 			count--;
-		}
-		else
-		{
-			// printf(" No\n");
 		}
 	}
 }
@@ -141,10 +132,9 @@ u8 ms_countAdjacentMines(u16 x, u16 y)
 		for (s16 col = -1; col < 2; col++)
 		{
 			if (row == 0 && col == 0);
-			else
+			else if (ms_isMine(x + col, y + row))
 			{
-				if (ms_isMine(x + col, y + row))
-					count++;
+				count++;
 			}
 		}
 	}
@@ -157,9 +147,7 @@ void ms_updateAdjacentMines(u16 x, u16 y)
 	if (!ms_isMine(x, y))
 	{
 		u8 count = ms_countAdjacentMines(x, y);
-		
 		tile_s* tile = ms_getTile(x, y);
-		// printf("{%2u,%2u}: %1u\n", x, y, count);
 		switch (count)
 		{
 			case 1:
@@ -186,6 +174,7 @@ void ms_updateAdjacentMines(u16 x, u16 y)
 			case 8:
 				tile->type = TILE_8;
 				break;
+			case 0:
 			default:
 				tile->type = TILE_EMPTY;
 				break;
@@ -500,7 +489,7 @@ void MinesweeperScene::initialize()
 {
 	srand(osGetTime());
 
-	ms_init(20, 15, 10);
+	ms_init(20, 15, 20);
 
 	if (!mineTiles) mineTiles = sf2d_create_texture_mem_RGBA8(ImageManager::mineTiles_img.pixel_data, ImageManager::mineTiles_img.width, ImageManager::mineTiles_img.height, TEXFMT_RGBA8, SF2D_PLACE_RAM);
 }
@@ -544,8 +533,9 @@ void MinesweeperScene::updateInput(const keystate_s& ks)
 
 		if (ks.down & KEY_X)
 		{
-			ms_init(20, 15, 10);
+			ms_init(20, 15, 20);
 			// ms_discoverTiles();
+			consoleClear();
 		}
 	}
 
