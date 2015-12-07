@@ -15,6 +15,8 @@ int main(int argc, char **argv)
 	consoleInit(GFX_TOP, NULL);
 
 	printf("Sizeof report:\n");
+	printf(" > tile_s: %u\n", sizeof(tile_s));
+	printf(" > minesland_s: %u\n", sizeof(minesland_s));
 
 	MinesweeperScene scene;
 	scene.initialize();
