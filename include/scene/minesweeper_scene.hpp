@@ -53,12 +53,16 @@ struct minesland_s
 	u16 tileWidth;
 	u16 tileHeight;
 	u16 bombCount;
+	u16 flagCount;
+	u16 hintCount;
+	u16 tileCount;
 	u16 tileLeft;
 };
 
 /** Startend functions **/
 void ms_init(u16 width, u16 height, u16 bombCount);
 void ms_fini();
+void ms_flush();
 void ms_win();
 void ms_boom();
 

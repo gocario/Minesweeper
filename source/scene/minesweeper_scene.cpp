@@ -24,8 +24,41 @@ void ms_init(u16 width, u16 height, u16 bombCount)
 	minesland.width = width;
 	minesland.height = height;
 	minesland.bombCount = bombCount;
-	minesland.tileLeft = minesland.size - bombCount;
 	minesland.data = new tile_s[minesland.size];
+
+	ms_flush();
+}
+
+
+void ms_fini()
+{
+	delete[] minesland.data;
+	minesland.width = 0;
+	minesland.height = 0;
+	minesland.size = 0;
+	minesland.bombCount = 0;
+	minesland.flagCount = 0;
+	minesland.hintCount = 0;
+	minesland.tileCount = 0;
+	minesland.tileLeft = 0;
+
+	minesland.x = 0;
+	minesland.y = 0;
+	minesland.tileWidth = 0;
+	minesland.tileHeight = 0;
+
+	minesland.tile.type = TILE_EMPTY;
+	minesland.tile.state = TILE_UNKNOWN;
+	minesland.tile.checked = true;
+}
+
+
+void ms_flush()
+{
+	minesland.flagCount = 0;
+	minesland.hintCount = 0;
+	minesland.tileCount = minesland.size - minesland.bombCount;
+	minesland.tileLeft = minesland.tileCount;
 
 	minesland.x = 0;
 	minesland.y = 0;
@@ -37,26 +70,6 @@ void ms_init(u16 width, u16 height, u16 bombCount)
 	minesland.tile.checked = true;
 
 	ms_populateTiles();
-}
-
-
-void ms_fini()
-{
-	delete[] minesland.data;
-	minesland.width = 0;
-	minesland.height = 0;
-	minesland.size = 0;
-	minesland.bombCount = 0;
-	minesland.tileLeft = 0;
-
-	minesland.x = 0;
-	minesland.y = 0;
-	minesland.tileWidth = 0;
-	minesland.tileHeight = 0;
-
-	minesland.tile.type = TILE_EMPTY;
-	minesland.tile.state = TILE_UNKNOWN;
-	minesland.tile.checked = true;
 }
 
 
@@ -300,6 +313,13 @@ void ms_discoverTile(u16 x, u16 y)
 	{
 		if (tile->type == TILE_MINE)
 		{
+			if (minesland.tileCount == minesland.tileLeft)
+			{
+				ms_flush();
+				ms_discoverTile(x, y);
+				return;
+			}
+
 			ms_boom();
 		}
 		else
@@ -330,9 +350,15 @@ void ms_stateFlagTile(u16 x, u16 y)
 {
 	tile_s* tile = ms_getTile(x, y);
 	if (tile->state == TILE_FLAGGED)
+	{
+		minesland.flagCount--;
 		ms_stateUnknownTile(x, y);
+	}
 	else if (tile->state != TILE_DISCOVERED)
+	{
+		minesland.flagCount++;
 		tile->state = TILE_FLAGGED;
+	}
 
 }
 
@@ -341,9 +367,15 @@ void ms_stateHintTile(u16 x, u16 y)
 {
 	tile_s* tile = ms_getTile(x, y);
 	if (tile->state == TILE_HINTED)
+	{
+		minesland.hintCount--;
 		ms_stateUnknownTile(x, y);
+	}
 	else if (tile->state != TILE_DISCOVERED)
+	{
+		minesland.hintCount++;
 		tile->state = TILE_HINTED;
+	}
 }
 
 
@@ -489,7 +521,7 @@ void MinesweeperScene::initialize()
 {
 	srand(osGetTime());
 
-	ms_init(20, 15, 20);
+	ms_init(20, 15, 80);
 
 	if (!mineTiles) mineTiles = sf2d_create_texture_mem_RGBA8(ImageManager::mineTiles_img.pixel_data, ImageManager::mineTiles_img.width, ImageManager::mineTiles_img.height, TEXFMT_RGBA8, SF2D_PLACE_RAM);
 }
@@ -505,7 +537,9 @@ void MinesweeperScene::destroy()
 
 void MinesweeperScene::drawTopScreen()
 {
-	printf("\x1B[10;1HTileleft: %3u\n", minesland.tileLeft);
+	printf("\x1B[4;1HNumber of bombs: %3u\n", minesland.bombCount);
+	printf("\x1B[5;1HBombs left: %3i\n", minesland.bombCount - minesland.flagCount);
+	printf("\x1B[6;1HTiles left: %3u\n", minesland.tileLeft);
 }
 
 
@@ -533,8 +567,7 @@ void MinesweeperScene::updateInput(const keystate_s& ks)
 
 		if (ks.down & KEY_X)
 		{
-			ms_init(20, 15, 20);
-			// ms_discoverTiles();
+			ms_flush();
 			consoleClear();
 		}
 	}
